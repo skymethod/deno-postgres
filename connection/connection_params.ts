@@ -27,6 +27,7 @@ export type ConnectionString = string;
  * It will throw if no env permission was provided on startup
  */
 function getPgEnv(): ClientOptions {
+  if (!globalThis.Deno?.env) throw new Error(`No Deno.env`); // dfp: Deno.env may not exist
   return {
     applicationName: Deno.env.get("PGAPPNAME"),
     database: Deno.env.get("PGDATABASE"),
@@ -333,7 +334,7 @@ export function createParams(
   try {
     pgEnv = getPgEnv();
   } catch (e) {
-    if (e instanceof Deno.errors.PermissionDenied) {
+    if (e.message === 'No Deno.env' || globalThis.Deno?.errors?.PermissionDenied && e instanceof Deno.errors.PermissionDenied) { // dfp: Deno.errors.PermissionDenied may not exist
       has_env_access = false;
     } else {
       throw e;
@@ -354,6 +355,7 @@ export function createParams(
     const socket = provided_host ?? DEFAULT_OPTIONS.socket;
     try {
       if (!isAbsolute(socket)) {
+        if (!Deno?.mainModule) throw new Error(`Relative socket needs Deno.mainModule`); // dfp: Deno.mainModule may not exist
         const parsed_host = new URL(socket, Deno.mainModule);
 
         // Resolve relative path

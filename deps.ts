@@ -6,7 +6,7 @@ export {
   BufWriter,
 } from "https://deno.land/std@0.160.0/io/buffer.ts";
 export { copy } from "https://deno.land/std@0.160.0/bytes/mod.ts";
-export { crypto } from "https://deno.land/std@0.160.0/crypto/mod.ts";
+const crypto = globalThis.crypto; export { crypto }; // dfp: assume crypto in globalThis
 export {
   type Deferred,
   deferred,

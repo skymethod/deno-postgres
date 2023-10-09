@@ -142,6 +142,11 @@ export class Connection {
     return this.#transport;
   }
 
+  static connFactory?: { // dfp: allow alternate Deno.connect/startTls
+    connect: typeof Deno.connect,
+    startTls: typeof Deno.startTls,
+  }
+
   constructor(
     connection_params: ClientConfiguration,
     disconnection_callback: () => Promise<void>,
@@ -250,7 +255,7 @@ export class Connection {
   async #openConnection(options: ConnectOptions) {
     // @ts-ignore This will throw in runtime if the options passed to it are socket related and deno is running
     // on stable
-    this.#conn = await Deno.connect(options);
+    this.#conn = await (Connection.connFactory?.connect ?? Deno.connect)(options); // dfp: allow alternate Deno.connect
     this.#bufWriter = new BufWriter(this.#conn);
     this.#bufReader = new BufReader(this.#conn);
   }
@@ -287,7 +292,7 @@ export class Connection {
     connection: Deno.Conn,
     options: { hostname: string; caCerts: string[] },
   ) {
-    this.#conn = await Deno.startTls(connection, options);
+    this.#conn = await (Connection.connFactory?.startTls ?? Deno.startTls)(connection, options); // dfp: allow alternate Deno.startTls
     this.#bufWriter = new BufWriter(this.#conn);
     this.#bufReader = new BufReader(this.#conn);
   }
@@ -387,7 +392,7 @@ export class Connection {
       } catch (e) {
         // Make sure to close the connection before erroring or reseting
         this.#closeConnection();
-        if (e instanceof Deno.errors.InvalidData && tls_enabled) {
+        if (globalThis.Deno?.errors?.InvalidData && e instanceof Deno.errors.InvalidData && tls_enabled) { // dfp: Deno.errors.InvalidData may not exist
           if (tls_enforced) {
             throw new Error(
               "The certificate used to secure the TLS connection is invalid.",
